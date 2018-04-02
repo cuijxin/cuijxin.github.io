@@ -59,9 +59,38 @@ spec:
                       - containerPort: 80
 ```
 
-保存以上内容为nginx-deployment.yaml，命令行执行：
+保存以上内容为nginx-deployment.yaml，命令行执行kubectl create命令：
 
 ```
 $kubectl create -f nginx-deployment.yaml --record
 deployment "nginx-deployment" created
 ```
+
+将kubectl的 --record 的flag设置为 true 可以在annotation中记录当前命令创建或者升级了该资源。这在未来会很有用，例如，查看每个Deployment revision中执行了哪些命令。
+
+然后立即执行 get 将获得如下结果：
+
+```
+$kubectl get deployments
+NAME               DESIRED      CURRENT    UP-TO-DATE    AVAILABLE   AGE
+nginx-deployment   3            0          0             0           1s                
+```
+
+输出结果表明我们希望的replica数是3（根据deployment中的 .spec.replicas 配置），当前replica数（ .status.replicas ）是0，最新的replica数（ .status.updatedReplicas ）是0，可用的replica数（ .status.availableReplicas ）是0。
+
+过几秒后再执行 get 命令，将获得如下输出：
+
+```
+NAME               DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   3         3         3            3           5s
+```
+
+我们可以看到Deployment已经创建了3个replica，所有的replica都已经是最新的了（包含最新的pod template），可用的（根据Deployment中的 .spec.minReadySeconds 声明，处于已就绪状态的pod的最少个数）。执行 kubectl get rs 和 kubectl get pods 会显示Replica Set（RS）和Pod已创建。
+
+```
+$kubectl get rs
+NAME                         DESIRED     CURRENT     READY    AGE
+nginx-deployment-431080787   3           3           3        8m
+```
+
+你可能会注意到Replica Set的名字总是 {Deployment的名字}-{pod template的hash值}。

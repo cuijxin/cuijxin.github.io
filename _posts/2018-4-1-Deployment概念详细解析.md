@@ -387,3 +387,7 @@ Events:
   11m		11m		1	deployment-controller			Normal		ScalingReplicaSet	Scaled down replica set nginx-deployment-2078889897 to 2
   11m		11m		1	deployment-controller			Normal		ScalingReplicaSet	(combined from similar events): Scaled up replica set nginx-deployment-2558903419 to 2
 ```
+
+### 清理Policy 
+
+你可以通过设置 .spec.revisionHistoryLimit 项来指定deployment最多保留多少revision历史记录。默认的会保留所有的revision；如果将该项设置为0，Deployment就不允许回退了。

@@ -391,3 +391,37 @@ Events:
 ### 清理Policy 
 
 你可以通过设置 .spec.revisionHistoryLimit 项来指定deployment最多保留多少revision历史记录。默认的会保留所有的revision；如果将该项设置为0，Deployment就不允许回退了。
+
+## Deployment扩容
+
+你可以使用以下命令扩容Deployment:
+
+```
+$ kubectl scale deployment nginx-deployment --replicas 10
+deployment "nginx-deployment" scaled
+```
+
+假设你的集群中启用了horizontal pod autoscaling，你可以给Deployment设置一个autoscaler，基于当前Pod的CPU利用率选择最少和最多的Pod数。
+
+```
+$ kubectl autoscale deployment nginx-deployment --min=10 --max=15 --cpu-percent=80
+deployment "nginx-deployment" autoscaled
+```
+
+### 比例扩容
+
+RollingUpdate Deployment支持同时运行一个应用的多个版本。当你或者autoscaler扩容一个正在rollout中（进行中或者已经暂停）的RollingUpdate Deployment的时候，为了降低风险，Deployment controller将会平衡已存在的active的ReplicaSets（有Pod的ReplicaSets）和新加入的replicas。这被称为比例扩容。
+
+例如，你正在运行中含有10个replica的Deployment。maxSurge=3，maxUnavailable=2。
+
+```
+$ kubectl get deploy
+NAME               DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   10        10        10           10          11h
+```
+
+你更新了一个镜像，而在集群内部无法解析。
+
+```
+$ kubectl set image deploy/nginx-deployment nginx=nginx:sometag
+```

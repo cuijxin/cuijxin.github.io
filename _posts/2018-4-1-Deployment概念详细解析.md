@@ -424,4 +424,13 @@ nginx-deployment   10        10        10           10          11h
 
 ```
 $ kubectl set image deploy/nginx-deployment nginx=nginx:sometag
+deployment "nginx-deployment" image updated
 ```
+
+镜像更新启动了一个包含ReplicaSet nginx-deployment-418298827的新的rollout，但是它被阻塞了，因为我们上面提到的maxUnavailable。
+
+因为我的机器和书上说的显示的效果不一致，这里就不摘录，等我搞清楚其中的原因再说吧。
+……
+
+
+

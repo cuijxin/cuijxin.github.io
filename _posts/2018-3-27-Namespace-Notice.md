@@ -24,7 +24,7 @@ Namespace 包含两种状态“ Active ”和“ Terminating ”。在 Namespace
 
 ### Namespace命名规则
 
-Namespace 名称满足正则表达式 [a-z0-9]([-a-z0-9]*[a-z0-9])?，最大长度为63位。
+Namespace 名称满足正则表达式 ```[a-z0-9]([-a-z0-9]*[a-z0-9])?```，最大长度为63位。
 
 ### 删除Namespace
 

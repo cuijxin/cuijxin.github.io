@@ -2,7 +2,7 @@
 layout:     post
 title:      Namespace注意事项
 subtitle:   《Kubernetes指南》书摘
-date:       2018-03-27
+date:       2018-02-19
 author:     cjx
 header-img: img/post-bg-BJJ.jpg
 catalog: true

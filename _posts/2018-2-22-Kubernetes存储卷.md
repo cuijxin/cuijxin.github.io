@@ -122,7 +122,7 @@ volumes:
     revision: "22f1d8406d464b0c0874075539c1f2e96c253775"
 ```
 
-#### 使用subPath
+### 使用subPath
 
 Pod的多个容器使用同一个Volume时，subPath非常有用
 ```
@@ -149,3 +149,72 @@ spec:
     persistentVolumeClaim:
       claimName: my-lamp-site-data 
 ```
+
+### FlexVolume
+
+如果内置的这些Volume不满足要求，则可以使用FlexVolume实现自己的Volume插件。注意要把volume plugin放到```/usr/libexec/kubernetes/kubelet-plugins/volume/exec/<vendor~driver>/<driver>```，plugin要实现```init/attach/detach/mount/umount```等命令（可参考lvm的示例）。
+```
+- name: test
+  flexVolume:
+    driver: "kubernetes.io/lvm"
+    fsType: "ext4"
+    options:
+      volumeID: "vol1"
+      size: "1000m"
+      volumegroup: "kube_vg"
+```
+
+### Projected Volume
+
+Projected volume将多个Volume源映射到同一个目录中，支持secret、downwardAPI和configMap。
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-test
+spec:
+  containers:
+  - name: container-test
+    image: busybox
+    volumeMounts:
+    - name: all-in-one
+      mountPath: "projected-volume"
+      readOnly: true
+  volumes:
+  - name: all-in-one
+    projected:
+      sources:
+      - secret:
+          name: mysecret
+          items:
+          - key: username
+            path: my-group/my-username
+      - downardAPI:
+          items:
+            - path: "labels"
+              fieldRef:
+                fieldPath: metadata.labels
+            - path: "cpu_limit"
+              resourceFieldRef:
+                containerName: container-test
+                resource: limits.cpu
+      - configMap:
+          name: myconfigmap
+          items:
+            - key: config
+              path: my-group/my-config
+```
+
+### 本地存储限额
+
+v1.7+支持对基于本地存储（如hostPath，emptyDir，gitRepo等）的容量进行调度限额，可以通过```feature-gates=LocalStorageCapacityIsolation=true```来开启这个特性。
+
+为了支持这个特性，Kubernetes将本地存储分为两类：
+
+1. ```storage.kubernetes.io/overlay```，即```/var/lib/docker```的大小。
+
+2. ```storage.kubernetes.io/scratch```，即```/var/lib/kubelet```的大小。
+
+Kubernetes根据```storage.kubernetes.io/scratch```的大小来调度本地存储空间，而根据```storage.kubernetes.io/overlay```来调度容器的存储。比如：
+为容器请求64MB的可写层存储空间

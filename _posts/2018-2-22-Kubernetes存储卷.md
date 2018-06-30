@@ -217,4 +217,41 @@ v1.7+支持对基于本地存储（如hostPath，emptyDir，gitRepo等）的容�
 2. ```storage.kubernetes.io/scratch```，即```/var/lib/kubelet```的大小。
 
 Kubernetes根据```storage.kubernetes.io/scratch```的大小来调度本地存储空间，而根据```storage.kubernetes.io/overlay```来调度容器的存储。比如：
+
 为容器请求64MB的可写层存储空间
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ls1
+spec:
+  restartPolicy: Never
+  containers:
+  - name: hello
+    image: busybox
+    command:  ["df"]
+    resources:
+      requests:
+        storage.kubernetes.io/overlay: 64Mi
+```
+
+为empty请求64MB的存储空间
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ls1
+spec:
+  restartPolicy: Never
+  containers:
+  - name: hello
+    image: busybox
+    command: ["df"]
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    emptyDir:
+      sizeLimit: 64Mi
+```

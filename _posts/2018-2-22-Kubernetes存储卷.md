@@ -10,7 +10,7 @@ tags:
     - K8S
 ---
 
-### Kubernetes存储卷
+## Kubernetes存储卷
 
 我们知道默认情况下容器的数据都是非持久化的，在容器消亡以后数据也跟着丢失，所以Docker提供了Volume机制以便将数据持久化存储。类似的Kubernetes提供了更强大的Volume机制和丰富的插件，解决了容器数据持久化和容器间共享数据的问题。
 
@@ -255,3 +255,59 @@ spec:
     emptyDir:
       sizeLimit: 64Mi
 ```
+## Persistent Volume
+
+PersistentVolume(PV)和PersistentVolumeClaim(PVC)提供了方便的持久化卷：PV提供网络存储资源，而PVC请求存储资源。这样，设置持久化的工作流包括配置底层文件系统或者云数据卷、创建持久性数据卷、最后创建claim来将pod跟数据卷关联起来。PV和PVC可以将pod和数据卷解耦，pod不需要知道确切的文件系统或者支持它的持久化引擎。
+
+### Volume生命周期
+
+Volume的生命周期包括5个阶段：
+
+1. Provisioning，即PV的创建，可以直接创建PV（静态方式），也可以使StorageClass动态创建；
+
+2. Binding，将PV分配给PVC；
+
+3. Using，Pod通过PVC使用该Volume；
+
+4. Releasing，Pod释放Volume并删除PVC；
+
+5. Reclaiming，回收PV，可以保留PV以便下次使用，也可以直接从云存储中删除；
+
+根据这5个阶段，Volume的状态有以下4种：
+
+1. Available：可用；
+
+2. Bound：已经分配给PVC；
+
+3. Released：PVC解绑但还未执行回收策略；
+
+4. Failed：发生错误；
+
+### PV
+
+PersistentVolume(PV)是集群之中的一块网络存储。跟Node一样，也是集群的资源。PV跟Volume（卷）类似，不过会有独立于Pod的生命周期。比如一个NFS的PV可以定义为：
+```
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0003
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /tmp
+    server: 172.17.0.2
+```
+
+PV的访问模式（accessModes）有三种：
+1. ReadWriteOnce(RWO)：是最基本的方式，可读可写，但只支持被单个Pod挂载。
+
+2. ReadOnlyMany(ROX)：可以以只读的方式被多个Pod挂载。
+
+3. ReadWriteMany(RWX)：这种存储可以以读写的方式被多个Pod共享。
+
+不是每一种存储都支持这三种方式，像共享方式，目前支持的还比较少，比较常用的是NFS。在PVC绑定PV时通常根据两个条件来绑定，一个是存储的大小，另一个就是访问模式。
+

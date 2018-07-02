@@ -31,3 +31,21 @@ tags:
 1. kubenet:这是一个基于CNI bridge的网络插件（在bridge插件的基础上扩展了port mapping和traffic shaping），是目前推荐的默认插件。
 
 2. CNI:CNI网络插件，需要用户将网络配置放到```/etc/cni/net.d```目录中，并将CNI插件的二进制文件放入```/opt/cni/bin```
+
+### Host network
+
+最简单的网络模型就是让容器共享Host的network namespace，使用宿主机的网络协议栈。这样，不需要额外的配置，容器就可以共享宿主的各种网络资源。
+
+优点：
+
+1. 简单，不需要任何额外配置；
+
+2. 高效，没有NAT等额外的开销；
+
+缺点：
+
+1. 没有任何的网络隔离；
+
+2. 容器和Host的端口号容易冲突；
+
+3. 容器内任何网络配置都会影响整个宿主机；

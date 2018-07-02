@@ -117,3 +117,42 @@ spec:
           path: /k8s-nfs/redis/data
           server: 192.168.8.150
 ```
+
+#### persistentVolumeClaim
+
+persistentVolumeClaim类型存储卷将PersistentVolume挂载到Pod中作为存储卷。使用此类型的存储卷，用户并不知道存储卷的详细信息。
+
+此处定义名为busybox-deployment的部署YAML配置文件，使用的镜像为busybox。基于busybox镜像的容器需要对/mnt目录下的数据进行持久化，在YAML文件指定使用名称为nfs的PersistentVolumeClaim对容器的数据进行持久化。
+```
+# This mounts the nfs volume claim into /mnt and continuously
+# overwrites /mnt/index.html with the time and hostname of the pod.
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+spec:
+  replicas: 2
+  selector:
+    name: busybox-deployment
+  template:
+    metadata:
+      labels:
+        name: busybox-deployment
+    spec:
+      containers:
+      - image: busybox
+        command:
+        - sh
+        - -c
+        - 'while true; do date > /mnt/index.html; hostname >> /mnt/index.hmtl; sleep $(($RANDOM % 5 + 5)); done'
+        imagePullPolicy: IfNotPresent
+        name: busybox
+        volumeMounts:
+        # name must match the volume name below
+        - name: nfs
+          mountPath: "/mnt"
+      volumes:
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: nfs-pvc
+```

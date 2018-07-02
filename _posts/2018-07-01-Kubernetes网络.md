@@ -2,7 +2,7 @@
 layout:     post
 title:      Kubernetes网络
 subtitle:   《Kubernetes指南》书摘
-date:       2018-2-24
+date:       2018-07-01
 author:     cjx
 header-img: img/post-bg-swift.jpg
 catalog: true
@@ -24,7 +24,7 @@ tags:
 
   3）容器自己看到的IP跟其他容器看到的一样。
 
-3. Service cluster IP尽可在集群内布访问，外部请求需要通过NodePort、LoadBalance或者Ingress来访问。
+3. Service cluster IP仅可在集群内部访问，外部请求需要通过NodePort、LoadBalance或者Ingress来访问。
 
 ### 官方插件
 
@@ -49,3 +49,74 @@ tags:
 2. 容器和Host的端口号容易冲突；
 
 3. 容器内任何网络配置都会影响整个宿主机；
+
+### CNI plugin
+
+安装CNI：
+
+```
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+       https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+yum install -y kubernetes-cni
+```
+
+配置CNI bridge插件：
+```
+mkdir -p /etc/cni/net.d
+cat > /etc/cni/net.d/10-mynet.conf <<-EOF
+{
+  "cniVersion": "0.3.0",
+  "name": "mynet",
+  "type": "bridge",
+  "bridge": "cni0",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.244.0.0/16",
+    "routes": [
+      {"dst": "0.0.0.0/0"}
+    ]
+  }
+}
+EOF
+
+cat > /etc/cni/net.d/99-loopback.conf <<-EOF
+{
+  "cniVersion": "0.3.0",
+  "type": "loopback"
+}
+EOF
+```
+
+### Flannel
+
+Flannel是一个为Kubernetes提供overlay network的网络插件，它基于Linux TUN/TAP，使用UDP封装IP包来创建overlay网络，并借助etcd维护网络的分配情况。
+
+```
+kubectl create -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel-rbac.yaml
+kubectl create -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+
+## [Weave Net](weave/index.md)
+
+#Weave Net是一个多主机容器网络方案，支持去中心化的控制平面，各个host上的wRouter
+# 间通过建立Full Mesh的TCP链接，并通过Gossip来同步控制信息。这种方式省去了集中式#的K/V Store，
+#能够在一定程度上减低部署的复杂性，Weave将其称为“data centric”，而非RAFT或者Paxos的“algorithm centric”。
+
+#数据平面上，Weave通过UDP封装实现L2 Overlay，封装支持两种模式，一种是运行在user space的sleeve mode，
+#另一种是运行在kernal space的fastpath mode。Sleeve mode通过pcap设备在Linux bridge上截获数据包并由wRouter完成UDP封装，
+#支持对L2 traffic进行加密，还支持Partial Connection，但是性能损失明显。
+#Fastpath mode即通过OVS的odp封装VxLAN并完成转发，wRouter不直接参与转发，
+#而是通过下发odp流表的方式控制转发，这种方式可以明显地提升吞吐量，但是不支持加密等高级功能。
+
+kubectl apply -f https://git.io/weave-kube
+```

@@ -135,7 +135,7 @@ kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/i
 
 ### OVS
 
-https://kubernetes.io/docs/admin/ovs-networking/提供了一种简单的基于OVS的网络配置方法：
+[https://kubernetes.io/docs/admin/ovs-networking/](https://kubernetes.io/docs/admin/ovs-networking/)提供了一种简单的基于OVS的网络配置方法：
 
 1. 每台机器创建一个Linux网桥kbr0，并配置docker使用该网桥（而不是默认的docker0），其子网为10.244.x.0/24；
 

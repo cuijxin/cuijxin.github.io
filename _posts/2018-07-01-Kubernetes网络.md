@@ -133,3 +133,16 @@ Calico在每一个计算节点利用Linux Kernel实现了一个高效的vRouter�
 kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 ```
 
+### OVS
+
+https://kubernetes.io/docs/admin/ovs-networking/提供了一种简单的基于OVS的网络配置方法：
+
+1. 每台机器创建一个Linux网桥kbr0，并配置docker使用该网桥（而不是默认的docker0），其子网为10.244.x.0/24；
+
+2. 每台机器创建一个OVS网桥obr0，通过veth pair连接kbr0并通过GRE将所有机器互联；
+
+3. 开启STP；
+
+4. 路由10.244.0.0/16到OVS隧道；
+
+![](/img/OVS.png)

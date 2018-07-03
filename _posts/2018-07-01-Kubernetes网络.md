@@ -146,3 +146,42 @@ kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/i
 4. 路由10.244.0.0/16到OVS隧道；
 
 ![](/img/OVS.png)
+
+### OVN
+
+OVN(Open Virtual Network)是OVS提供的原生虚拟化网络方案，旨在解决传统SDN架构（比如Neutron DVR）的性能问题。
+
+OVN为Kubernetes提供了两种网络方案：
+
+1. Overaly：通过ovs overlay连接容器；
+
+2. Underlay：将VM内的容器连接到VM所在的相同网络（开发中）
+
+其中，容器网络的配置是通过OVN的CNI插件来实现。
+
+### Contiv
+
+Contiv是思科开源的容器网络方案，主要提供基于Policy的网络管理，并与主流容器编排系统集成。Contiv最主要的优势是直接提供了多租户网络，并支持L2（VLAN），L3（BGP），Overlay（VXLAN）以及思科自家的ACI。
+
+### Romana
+
+Romana是Panic Networks在2016年提出的开源项目，旨在借鉴route aggregation的思路来解决Overlay方案给网络带来的开销。
+
+### OpenContrail
+
+OpenContrail是Juniper推出的开源网络虚拟化平台，其商业版本为Contrail。其主要由控制器和vRouter组成：
+
+1. 控制器提供虚拟网络的配置、控制和分析功能；
+
+2. vRouter提供分布式路由，负责虚拟路由器、虚拟网络的建立以及数据转发，其中，vRouter支持三种模式：
+1）Kernel vRouter：类似于ovs内核模块；
+
+2）DPDK vRouter：类似于ovs-dpdk;
+
+3）Netronome Agilio Solution（商业产品）：支持DPDK，SR-IOV and Express Virtio（XVIO）；
+
+Juniper/contrail-kubernetes提供了Kubernetes的集成，包括两部分：
+
+1. kubelet network plugin基于kubernetes v1.6已经删除的exec network plugin；
+
+2. kube-network-manager监听kubernetes API，并根据label信息来配置网络策略；

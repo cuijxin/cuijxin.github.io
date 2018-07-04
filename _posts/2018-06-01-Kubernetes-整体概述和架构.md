@@ -44,3 +44,16 @@ Kubernetes属于主从分布式架构，主要由Master Node和Worker Node组成
 
 4. Add-on：是对Kubernetes核心功能的扩展，例如增加网络和网络策略等能力。
 
+### Master Node（主节点）
+
+#### API Server（API服务器）
+
+API Server主要用来处理REST的操作，确保它们生效，并执行相关业务逻辑，以及更新etcd（或者其他存储）中的相关对象。API Server是所有REST命令的入口，它的相关结果状态被保存在etcd（或者其他存储）中。API Server的基本功能包括：
+
+1. REST语义，监控，持久化和一致性保证，API版本控制，放弃和生效等；
+
+2. 内置准入控制语义，同步准入控制钩子，以及异步资源初始化；
+
+3. API注册和发现；
+
+另外，API Server也作为集群的网关。默认情况，客户端通过API Server对集群进行访问，客户端需要通过认证，并使用API Server作为访问Node和Pod（以及service）的堡垒和代理/通道。

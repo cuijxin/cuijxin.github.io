@@ -23,3 +23,21 @@ tags:
 虽然```PersistentVolumeClaims```允许用户使用抽象存储资源，但用户需要具有不同性质（例如性能）的```PersistentVolume```来解决不同的问题。集群管理员需要能够提供各种各样的```PersistentVolume```，这些```PersistentVolume```的大小和访问模式可以各有不同，但不需要向用户公开实现这些卷的细节。对于这些需求，```StorageClass```资源可以实现。
 
 请参阅[工作示例的详细过程](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/)。
+
+## PersistentVolume和PersistentVolumeClaim的生命周期
+
+PV属于集群中的资源。PVC是对这些资源的请求，也作为对资源的请求的检查。PV和PVC之间的相互作用遵循这样的生命周期：
+
+### 配置（Provision）
+
+有两种方式来配置PV：静态或动态。
+
+#### 静态
+
+集群管理员创建一些PV。它们带有可供集群用户使用的实际存储的细节。他们存在于Kubernetes API中，可用于消费。
+
+#### 动态
+
+当管理员创建的静态PV都不匹配用户的```PersistentVolumeClaim```时，集群可能会尝试动态地位PVC创建卷。此配置基于```StorageClass```：PVC必须请求[存储类](https://kubernetes.io/docs/concepts/storage/storage-classes/)，并且管理员必须创建并配置该类才能进行动态创建。声明该类为“”可以有效地禁用其动态配置。
+
+要启用基于存储级别的动态存储配置，集群管理员需要启用API server上的```DefaultStorageClass```[准入控制器](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#defaultstorageclass)。例如，通过确保```DefaultStorageClass```位于API server组件的```--admission-control```标志，使用逗号分隔有序值列表中，可以完成此操作。有关API server命令行标志的更多歇息，请检查[kube-apiserver](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/)文档。

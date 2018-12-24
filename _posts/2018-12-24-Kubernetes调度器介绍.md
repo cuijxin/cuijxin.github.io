@@ -90,3 +90,106 @@ k8s.io/kubernetes/pkg/scheduler/algorithm/predicates/predicates.go。
 **3. ImageLocalityPriority: 就是如果在某个节点上已经有要使用的镜像了，镜像总大小值越大，权重就越高**
 **4. NodeAffinityPriority：这个就是根据节点的亲和性来计算一个权重值，后面我们会详细讲解亲和性的使用方法**
 
+除了这些策略之外，还有很多其他的策略，同样我们可以查看源码文件：k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/ 了解更多信息。每一个优先级函数会返回一个0-10的分数，分数越高表示节点越优，同时每一个函数也会对应一个表示权重的值。最终主机的得分用以下公式计算得出：
+
+```
+finalScoreNode = (weight1 * priorityFunc1) + (weight2 * priorityFunc2) + ... + (weightn * priorityFuncn)
+```
+
+## 自定义调度
+
+上面就是 kube-scheduler 默认调度的基本流程，除了使用默认的调度器之外，我们也可以自定义调度策略。
+
+### 调度器扩展
+
+```kube-scheduler``` 在启动的时候可以通过 ```--policy-config-file```参数来指定调度策略文件，我们可以根据我们自己的需要来组装 ```Predicates```和```Priority```函数。选择不同的过滤函数和优先级函数、控制优先级函数的权重、调整过滤函数的顺序都会影响调度过程。
+
+下面是官方的 Policy 文件示例：
+```
+{
+    "kind" : "Policy",
+    "apiVersion" : "v1",
+    "predicates" : [
+        {"name" : "PodFitsHostPorts"},
+        {"name" : "PodFitsResources"},
+        {"name" : "NoDiskConflict"},
+        {"name" : "NoVolumeZoneConflict"},
+        {"name" : "MatchNodeSelector"},
+        {"name" : "HostName"}
+    ],
+    "priorities" : [
+        {"name" : "LeastRequestedPriority", "weight" : 1},
+        {"name" : "BalancedResourceAllocation", "weight" : 1},
+        {"name" : "ServiceSpredingPriority", "weight" : 1},
+        {"name" : "EqualPriority", "weight" : 1}
+    ]
+}
+```
+
+### 多调度器
+
+如果默认的调度器不满足要求，还可以部署自定义的调度器。并且，在整个集群中还可以同时运行多个调度器实例，通过 podSpec.schedulerName 来选择使用哪一个调度器（默认使用内置的调度器）。
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  schedulerName: my-scheduler  # 选择使用自定义调度器 my-scheduler
+  containers:
+  - name: nginx
+    image: nginx:1.10
+```
+
+要开发我们自己的调度器也是比较容易的，比如我们这里的 my-scheduler:
+
+**1. 首先需要通过指定的 API 获取节点和 Pod**
+**2. 然后选择 ```phase = Pending``` 和 ```schedulerName = my - scheduler```的 pod**
+**3. 计算每个 Pod 需要放置的位置之后，调度程序将创建一个 Binding 对象**
+**4. 然后根据我们自定义的调度器的算法计算出最合适的目标节点**
+
+### 优先级调度
+
+与前面所讲的调度优选策略中的优先级（Priorities）不同，前面所讲的优先级指的是节点优先级，而我们这里所说的优先级 pod priority 指的是 Pod 的优先级，高优先级的 Pod 会优先被调度，或者在资源不足的情况牺牲低优先级的 Pod，以便于重要的 Pod 能够得到资源部署。
+
+要定义 Pod 优先级，就需要先定义 ```PriorityClass```对象，该对象没有 Namespace 的限制：
+
+```
+apiVersion: v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+globalDefault: false
+description: "This priority class should be used for XYZ service pods only."
+```
+
+其中：
+**1. value 为32位整数的优先级，该值越大，优先级越高**
+**2. globalDefault 用于未配置 PriorityClassName 的 Pod，整个集群中应该只有一个 PriorityClass 将其设置为 true**
+
+然后通过在 Pod 的 ```spec.priorityClassName```中指定已定义的 ```PriorityClass```名称即可：
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+  priorityClassName: high-priority
+```
+
+另外一个值得注意的是当前节点没有足够的资源供调度器调度 Pod，导致 Pod 处于 pending 时，抢占（preemption）逻辑就会被触发。```Preemption```会尝试从一个节点删除低优先级的 Pod，从而释放资源使用高优先级的 Pod 得到节点资源进行部署。
+
+现在我们通过下面的图再去回顾下 kubernetes 的调度过程是不是就清晰很多了：
+
+![](/img/kube-scheduler2.png)

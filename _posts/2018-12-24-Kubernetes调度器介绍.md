@@ -25,12 +25,12 @@ kube-scheduler 是 kubernetes 的调度器，它的主要作用就是根据特�
 ![](/img/kube-scheduler.png)
 
 这个过程在我们看来好像比较简单，但在实际的生产环境中，需要考虑的问题就有很多了：
-**1. 如何保证全部的节点调度的公平性？要知道并不是所有节点资源配置都是一样的。**
-**2. 如何保证每个节点都能被分配资源？**
-**3. 集群资源如何能够被高效利用？**
-**4. 集群资源如何才能被最大化使用？**
-**5. 如何保证 Pod 调度的性能和效率？**
-**6. 用户是否可以根据自己的实际需求定制自己的调度策略？**
+1. 如何保证全部的节点调度的公平性？要知道并不是所有节点资源配置都是一样的。
+2. 如何保证每个节点都能被分配资源？
+3. 集群资源如何能够被高效利用？
+4. 集群资源如何才能被最大化使用？
+5. 如何保证 Pod 调度的性能和效率？
+6. 用户是否可以根据自己的实际需求定制自己的调度策略？
 
 考虑到实际环境中的各种复杂情况，kubernetes 的调度器采用插件化的形式实现，可以方便用户进行定制或者二次开发，我们可以自定义一个调度器并以插件形式和 kubernetes 进行集成。
 
@@ -47,9 +47,9 @@ kubernetes/pkg/scheduler
 其中 Scheduler 创建和运行的核心程序，对应的代码在 pkg/schduler/scheduler.go，如果要查看 kube-scheduler 的入口程序，对应的代码在 cmd/kube-scheduler/scheduler.go。
 调度主要分为以下几个部分：
 
-**1. 首先是预选过程，过滤掉不满足条件的节点，这个过程称为 Predicates**
-**2. 然后是优选过程，对通过的节点按照优先级排序，称之为 Priorities**
-**3. 最后从中选择优先级最高的节点，如果中间任何一步骤有错误，就直接返回错误**
+1. 首先是预选过程，过滤掉不满足条件的节点，这个过程称为 Predicates
+2. 然后是优选过程，对通过的节点按照优先级排序，称之为 Priorities
+3. 最后从中选择优先级最高的节点，如果中间任何一步骤有错误，就直接返回错误
 
 Predicates  阶段首先遍历全部节点，过滤掉不满足条件的节点，属于强制性规则，这一阶段输出的所有满足要求的 Node 将被记录并作为第二阶段的输入，如果所有的节点都不满足条件，那么 Pod 将会一直处于 Pending 状态，直到有节点满足条件，在这期间调度器会不断的重试。
 
@@ -73,22 +73,22 @@ Priorities 阶段即再次对节点进行筛选，如果有多个节点都能满
 
 其中 Predicates 过滤有一系列的算法可以使用，我们这里简单列举几个：
 
-**1. PodFitsResources: 节点上剩余的资源是否大于 Pod 请求的资源**
-**2. PodFitsHost: 如果 Pod 指定了 NodeName，检查节点名称是否和 NodeName 匹配**
-**3. PodFitsHostPorts: 节点上已经使用的 port 是否和 Pod 申请的 port 冲突**
-**4. PodSelectorMatches: 过滤掉和 Pod 指定的 label 不匹配的节点**
-**5. NoDiskConflict：已经 mount 的 volume 和 Pod 指定的 volume 不冲突，除非它们都是只读的**
-**6. CheckNodeDiskPressure: 检查节点磁盘空间是否符合要求**
-**7. CheckNodeMemoryPressure: 检查节点内存是否够用**
+1. PodFitsResources: 节点上剩余的资源是否大于 Pod 请求的资源
+2. PodFitsHost: 如果 Pod 指定了 NodeName，检查节点名称是否和 NodeName 匹配
+3. PodFitsHostPorts: 节点上已经使用的 port 是否和 Pod 申请的 port 冲突
+4. PodSelectorMatches: 过滤掉和 Pod 指定的 label 不匹配的节点
+5. NoDiskConflict：已经 mount 的 volume 和 Pod 指定的 volume 不冲突，除非它们都是只读的
+6. CheckNodeDiskPressure: 检查节点磁盘空间是否符合要求
+7. CheckNodeMemoryPressure: 检查节点内存是否够用
 
 除了这些过滤算法之外，还有一些其他的算法，更多更详细的我们可以查看源码文件：
 k8s.io/kubernetes/pkg/scheduler/algorithm/predicates/predicates.go。
 
 而 Priorities 优先级是由一系列键值对组成的，键是该优先级的名称，值是它的权重值，同样，我们这里给大家列举几个具有代表性的选项：
-**1. LeastRequestedPriority: 通过计算 CPU 和内存的使用率来决定权重，使用率越低权重越高，当然正常肯定也是资源使用率越低权重越高，能给别的 Pod 运行的可能性就越大**
-**2. SelectorSpredPriority: 为了更好的高可用，对同属于一个 Deployment 或者 RC 下面的多个 Pod 副本，尽量调度到多个不同的节点上，当一个 Pod 被调度的时候，会先去查找该 Pod 对应的 controller，然后查看该 controller 下面的已存在的 Pod，运行 Pod 越少的节点权重越高**
-**3. ImageLocalityPriority: 就是如果在某个节点上已经有要使用的镜像了，镜像总大小值越大，权重就越高**
-**4. NodeAffinityPriority：这个就是根据节点的亲和性来计算一个权重值，后面我们会详细讲解亲和性的使用方法**
+1. LeastRequestedPriority: 通过计算 CPU 和内存的使用率来决定权重，使用率越低权重越高，当然正常肯定也是资源使用率越低权重越高，能给别的 Pod 运行的可能性就越大
+2. SelectorSpredPriority: 为了更好的高可用，对同属于一个 Deployment 或者 RC 下面的多个 Pod 副本，尽量调度到多个不同的节点上，当一个 Pod 被调度的时候，会先去查找该 Pod 对应的 controller，然后查看该 controller 下面的已存在的 Pod，运行 Pod 越少的节点权重越高
+3. ImageLocalityPriority: 就是如果在某个节点上已经有要使用的镜像了，镜像总大小值越大，权重就越高
+4. NodeAffinityPriority：这个就是根据节点的亲和性来计算一个权重值，后面我们会详细讲解亲和性的使用方法
 
 除了这些策略之外，还有很多其他的策略，同样我们可以查看源码文件：k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/ 了解更多信息。每一个优先级函数会返回一个0-10的分数，分数越高表示节点越优，同时每一个函数也会对应一个表示权重的值。最终主机的得分用以下公式计算得出：
 
@@ -146,10 +146,10 @@ spec:
 
 要开发我们自己的调度器也是比较容易的，比如我们这里的 my-scheduler:
 
-**1. 首先需要通过指定的 API 获取节点和 Pod**
-**2. 然后选择 ```phase = Pending``` 和 ```schedulerName = my - scheduler```的 pod**
-**3. 计算每个 Pod 需要放置的位置之后，调度程序将创建一个 Binding 对象**
-**4. 然后根据我们自定义的调度器的算法计算出最合适的目标节点**
+1. 首先需要通过指定的 API 获取节点和 Pod
+2. 然后选择 ```phase = Pending``` 和 ```schedulerName = my - scheduler```的 pod
+3. 计算每个 Pod 需要放置的位置之后，调度程序将创建一个 Binding 对象
+4. 然后根据我们自定义的调度器的算法计算出最合适的目标节点
 
 ### 优先级调度
 
@@ -168,8 +168,8 @@ description: "This priority class should be used for XYZ service pods only."
 ```
 
 其中：
-**1. value 为32位整数的优先级，该值越大，优先级越高**
-**2. globalDefault 用于未配置 PriorityClassName 的 Pod，整个集群中应该只有一个 PriorityClass 将其设置为 true**
+1. value 为32位整数的优先级，该值越大，优先级越高
+2. globalDefault 用于未配置 PriorityClassName 的 Pod，整个集群中应该只有一个 PriorityClass 将其设置为 true
 
 然后通过在 Pod 的 ```spec.priorityClassName```中指定已定义的 ```PriorityClass```名称即可：
 

@@ -60,3 +60,33 @@ Priorities 阶段即再次对节点进行筛选，如果有多个节点都能满
 下面是调度过程的简单示意图：
 
 ![](/img/kube-scheduler1.png)
+
+更详细的流程是这样的：
+
+1. 首先，客户端通过 API Server 的 REST API 或者 kubectl 工具创建 Pod 资源
+2. API Server 收到用户请求后，存储相关数据到 etcd 数据库中
+3. 调度器监听 API Server 查看为调度（bind）的 Pod 列表，循环遍历地为每个 Pod 尝试分配节点，这个分配过程就是我们上面提到的两个阶段：
+  A 预先阶段（Predicates），过滤节点，调度器用一组规则过滤掉不符合要求的 Node 节点，比如 Pod 设置了资源的 request，那么可用资源比 Pod 需要的资源少的主机显然就会被过滤掉
+  B 优选阶段（Priorities），为节点的优先级打分，将上一阶段过滤出来的 Node 列表进行打分，调度器会考虑一些整体的优化策略，比如把 Deployment 控制的多个 Pod 副本分布到不同的主机上，使用最低负载的主机等等策略
+4. 经过上面的阶段过滤后选择打分最高的 Node 节点和 Pod 进行 binding 操作，然后将结果存储到 etcd 中
+5. 最后被选择出来的 Node 节点对应的 kubelet 去执行创建 Pod 的相关操作
+
+其中 Predicates 过滤有一系列的算法可以使用，我们这里简单列举几个：
+
+**1. PodFitsResources: 节点上剩余的资源是否大于 Pod 请求的资源**
+**2. PodFitsHost: 如果 Pod 指定了 NodeName，检查节点名称是否和 NodeName 匹配**
+**3. PodFitsHostPorts: 节点上已经使用的 port 是否和 Pod 申请的 port 冲突**
+**4. PodSelectorMatches: 过滤掉和 Pod 指定的 label 不匹配的节点**
+**5. NoDiskConflict：已经 mount 的 volume 和 Pod 指定的 volume 不冲突，除非它们都是只读的**
+**6. CheckNodeDiskPressure: 检查节点磁盘空间是否符合要求**
+**7. CheckNodeMemoryPressure: 检查节点内存是否够用**
+
+除了这些过滤算法之外，还有一些其他的算法，更多更详细的我们可以查看源码文件：
+k8s.io/kubernetes/pkg/scheduler/algorithm/predicates/predicates.go。
+
+而 Priorities 优先级是由一系列键值对组成的，键是该优先级的名称，值是它的权重值，同样，我们这里给大家列举几个具有代表性的选项：
+**1. LeastRequestedPriority: 通过计算 CPU 和内存的使用率来决定权重，使用率越低权重越高，当然正常肯定也是资源使用率越低权重越高，能给别的 Pod 运行的可能性就越大**
+**2. SelectorSpredPriority: 为了更好的高可用，对同属于一个 Deployment 或者 RC 下面的多个 Pod 副本，尽量调度到多个不同的节点上，当一个 Pod 被调度的时候，会先去查找该 Pod 对应的 controller，然后查看该 controller 下面的已存在的 Pod，运行 Pod 越少的节点权重越高**
+**3. ImageLocalityPriority: 就是如果在某个节点上已经有要使用的镜像了，镜像总大小值越大，权重就越高**
+**4. NodeAffinityPriority：这个就是根据节点的亲和性来计算一个权重值，后面我们会详细讲解亲和性的使用方法**
+

@@ -10,7 +10,7 @@ tags:
     - K8S
 ---
 
-## Kubernetes是什么？
+# Kubernetes是什么？
 
 Kubernetes基本上是这两年最热门、最被人熟知的技术了，它为软件工程师提供了强大的容器编排能力，模糊了开发和运维之间的边界，让我们开发、管理和维护一个大型的分布式系统和项目变得更加容易。
 
@@ -20,13 +20,13 @@ Kubernetes基本上是这两年最热门、最被人熟知的技术了，它为�
 
 Kubernetes将已经打包好的应用镜像进行编排，所以如果没有容器技术的发展和微服务框架中复杂的应用关系，其实也很难找到合适的应用场景去使用，所以Kubernetes有两大核心“依赖”---容器技术和微服务架构。
 
-### 容器技术
+## 容器技术
 
 Docker已经是容器技术的事实标准了，它让开发者将自己的应用以及依赖打包到一个可移植的容器中，让应用程序的运行可以实现环境无关。
 
 我们能通过Docker实现进程、网络以及挂载点和文件系统隔离的环境，并且能够对宿主机资源进行分配，这能够让我们在同一个机器上运行多个不同的Docker容器，任意一个Docker的进程都不需要关心宿主机的依赖，都各自在镜像构建时完成依赖的安装和编译等工作，这也是为什么Docker是Kubernetes项目的一个重要依赖。
 
-### 微服务架构
+## 微服务架构
 
 如果今天的软件并不是特别复杂并且需要承载的峰值流量不是特别多，那么后端项目的部署其实也只需要在虚拟机上安装一些简单的依赖，将需要部署的项目编译后运行就可以了。
 
@@ -36,9 +36,9 @@ Docker已经是容器技术的事实标准了，它让开发者将自己的应�
 
 Kubernetes的出现不仅主宰了容器编排的市场，更改变了过去的运维方式，不仅将开发与运维之间边界变得更加模糊，而且让DevOps这一角色变得更加清晰，每一个软件工程师都可以通过Kubernetes来定义服务之间的拓扑关系、线上的节点个数、资源使用量并且能够快速实现水平扩容、蓝绿部署等在过去复杂的运维操作。
 
-## Kubernetes核心组件
+# Kubernetes核心组件
 
-### 1.核心组件
+## 1.核心组件
 
 ![](/img/hxzj.png)
 
@@ -52,7 +52,7 @@ Kubernetes主要由以下几个核心组件组成：
 6. Container runtime负责镜像管理以及Pod和容器的真正运行（CRI）；
 7. kube-proxy负责为Service提供cluster内部的服务发现和负载均衡；
 
-### 2.组件通信
+## 2.组件通信
 
 Kubernetes多组件之间的通信原理为
 
@@ -72,7 +72,7 @@ Kubernetes多组件之间的通信原理为
 4. kubelet检测到有新的Pod调度过来，通过container runtime运行该Pod；
 5. kubelet通过container runtime取到Pod状态，并更新到apiserver中。
 
-### 3.端口号
+## 3.端口号
 
 ![](/img/port.png)
 
@@ -84,13 +84,13 @@ Workder node(s)
 
 ![](/img/work_node.png)
 
-## Kubernetes主要概念
+# Kubernetes主要概念
 
 Kubernetes中的Node、Pod、Replication Controller、Service等都可以看作为资源对象，几乎所有的资源对象都可以通过Kubectl工具执行增删改查并将其保存在etcd中持久化存储。
 
 Kubernetes通过对资源进行监控，并对比etcd库中保存的资源期望状态与当前环境中的资源实际状态的差异来实现对容器集群的自动控制与自动纠错。
 
-### 1. Master
+## 1. Master
 
 Master和Node都属于物理机或虚拟机，Master是集群的控制节点，负责集群的管理和控制，接收并执行Kubernetes的控制命令。
 
@@ -101,7 +101,7 @@ Master之上运行如下关键进程：
 3. Kubernetes Scheduler Manager（kube-scheduler-manager）：负责资源调度（pod调度）的进程；
 4. etcd：Master节点上需要启动etcd服务，Kubernetes上所有资源对象的数据都会保存在etcd中。
 
-### 2. Node
+## 2. Node
 
 除了Master，Kubernetes集群中其他所有机器称之为Node节点。Node是Pod真正运行的主机，可以是物理机，也可以是虚拟机。Node节点可以在运行期间动态的增加到Kubernetes集群中，当Node被纳入集群之中后，kubelet会自动向Master注册自己从而被Master所管理，Master会分配给Node任务，当Node宕机时，其工作负载会被Master自动转移到其他Node上。
 
@@ -133,7 +133,7 @@ Node会定时向Master发送自身的信息，包括操作系统，Docker版本�
 
 Taints和tolerations属性用于保证Pod不被调度到不合适的Node上，Taint应用于Node上，而toleration则应用于Pod上（Toleration是可选的）。
 
-### 3. Namespace
+## 3. Namespace
 
 Namespace是对一组资源和对象的抽象集合，比如可以用来将系统内部的对象划分为不同的项目组或用户。常见的pods、services、replication controllers和deployments等都是属于某一个Namespace的（默认是default），而node，persistentVolumes等则不属于任何Namespace。
 
@@ -146,7 +146,7 @@ Namespace常用来隔离不同的用户，比如Kuberentes自带的服务一般�
 3. PersistentVolumes是不属于任何namespace的，但PersistentVolumeClaim是属于某个特定namespace的。
 4. Events是否属于namespace取决于产生events的对象。
 
-### 4. Label
+## 4. Label
 
 Label是用户指定的键值对。可以附加到各种资源对象上，例如Node，Pod，Service，RC等。一个资源对象可以定义多个Lable，同一个Label可以应用到多个资源对象中。Label可在资源对象定义时指定，也能在运行过程中动态添加和删除。
 
@@ -178,7 +178,7 @@ Pod的特征：
 
 在默认情况下，Pod里的某个容器停止运行时，Kubernetes会自动检查到这个问题并且重新启动这个Pod（重启Pod里的所有容器），如果Pod所在的Node宕机，则会将这个Node上的所有Pod重新调度到其他节点。
 
-### 6. Replication Controller
+## 6. Replication Controller
 
 Replication Controller（简称RC）用于定义期望值，例如声明某种Pod的副本数量在任意时刻都符合某个预期值，所以其定义包括如下几个部分：
 
@@ -202,7 +202,7 @@ Replication Controller（简称RC）用于定义期望值，例如声明某种Po
 4. 通过改变RC的Pod副本数量，可以实现Pod的扩容和缩容功能；
 5. 通过改变RC里Pod模版中的镜像版本，可以实现Pod的滚动升级功能；
 
-### 7. Replica Set
+## 7. Replica Set
 
 由于RC与Kubernetes中的模块Replication Controller同名，所以在Kubernetes 1.2中，它升级为Replica Set，与之前的RC的唯一区别是支持基于集合的Label Selector，而RC只支持基于等式的Label Selector。这使得Replica Set的功能更强。
 
@@ -210,7 +210,7 @@ Replication Controller（简称RC）用于定义期望值，例如声明某种Po
 
 Replica Set和Deployment这两个资源对象逐步替代了之前的RC的作用，是Kubernetes 1.3中Pod自动（伸缩）的这个功能实现的基础。
 
-### 8. Deployment
+## 8. Deployment
 
 Deployment为Pod和Replica Set（下一代Replication Controller）提供声明式更新。你只需要在Deployment中描述你想要的目标状态是什么，Deployment controller就会帮你将Pod和Replica Set的实际状态改变到你想要的目标状态。你可以定义一个全新的Deployment，也可以创建一个新的替换就的Deployment。
 
@@ -224,7 +224,7 @@ Deployment为Pod和Replica Set（下一代Replication Controller）提供声明�
 6. 根据Deployment的状态判断上线是否hang住了。
 7. 清除旧的不必要的ReplicaSet。
 
-### 9. Horizontal Pod Autoscaler（HPA）
+## 9. Horizontal Pod Autoscaler（HPA）
 
 Pod横向自动扩容，通过追踪分析RC控制的所有目标Pod的负载变化情况，来确定是否需要针对性的调整目标Pod的副本数。
 
@@ -235,7 +235,7 @@ HPA有以下两种方式来作为HPA的负载指标：
 
 如果某一指标达到临界点，例如CPUUtilizationPercentage达到80%，可以认为是当前Pod副本数很可能不足以支撑接下来更多的请求，此时会触发动态扩容，当请求高峰期过去后，Pod的CPUUtilizationPercentage又会降下来，此时对应的Pod数就会自动减少到一个合理的水平。
 
-### 10. StatefulSet
+## 10. StatefulSet
 
 在Kubernetes中，Pod的管理对象RC，Deployment，DaemonSet和Job都是面向无状态的服务，但是在现实中很多服务都需要状态，例如MySQL、ZooKeeper等。这些应用的集群有以下共同点：
 
@@ -252,7 +252,7 @@ StatefulSet可以看为Deployment/RC的变种，有如下特性：
 2. StatefulSet控制的Pod副本的启停顺序是受控的，操作第n个Pod时，前n-1个Pod已经是运行并且准备好的状态；
 3. StatefulSet里的Pod采用稳定的持久化存储卷，通过PV/PVC来实现，删除Pod时，默认不会删除与StatefulSet相关的存储卷。
 
-### 11. Volume
+## 11. Volume
 
 我们知道默认情况下容器的数据都是非持久化的，在容器消亡以后数据也跟着丢失，所以Docker提供了Volume机制以便将数据持久化存储。类似的，Kubernetes提供了更强大的Volume机制和丰富的插件，除了可以让多个容器共享文件，让容器数据写到宿主机的磁盘上或者网络存储外，还能通过ConfigMap做容器配置文件集中化定义与管理。
 
@@ -267,7 +267,7 @@ Volume类型：
 1. 容器挂掉后Kubelet再次重启容器时，Volume的数据依然还在；
 2. 当Pod删除时，Volume才会清理。数据是否丢失取决于具体的Volume类型，比如emptyDir的数据会丢失，而PV的数据则不会丢失。
 
-### 12. Persistent Volume
+## 12. Persistent Volume
 
 Persistent Volume（PV）和PersistentVolumeClaim（PVC）提供了方便的持久化卷：PV提供网络存储资源，而PVC请求存储资源。这样，设置持久化存储的工作流包括配置底层文件系统或者云数据卷、创建持久性数据卷、最后创建claim来将Pod跟数据卷关联起来。PV和PVC可以将Pod和数据卷解耦，Pod不需要知道确切的文件系统或者支持它的持久化引擎。
 
@@ -290,7 +290,7 @@ PV的状态：
 3. Released：对应的PVC已经被删除，但该资源尚未被集群收回；
 4. Failed：改卷的自动回收过程失败。
 
-### 13. 服务发现与负载均衡
+## 13. 服务发现与负载均衡
 
 Kubernetes在设计之初就充分考虑了针对容器的服务发现与负载均衡机制，提供了Service资源，并通过kube-proxy配合cloud provider来适应不同的应用场景。随着Kubernetes用户的激增，用户场景的不断丰富，又产生了一些新的负载均衡机制。目前，Kubernetes中负载均衡大致可以分为以下几种机制，每种机制都有其特定的应用场景：
 
@@ -299,7 +299,7 @@ Kubernetes在设计之初就充分考虑了针对容器的服务发现与负载�
 3. Service Load Balancer：把load balnacer直接跑在容器中，实现Bare Metal的Service Load Balancer；
 4. Custom Load Balancer：自定义负载均衡，并替代kube-proxy，一般在物理部署Kubernetes时使用，方便接入公司已有的外部服务；
 
-### 14. Service
+## 14. Service
 
 Kubernetes中的Service对应的是微服务架构中的一个微服务，之前的Pod，RC等资源对象都是为Service服务的。
 
@@ -331,7 +331,7 @@ Cluster IP只能结合Service Port组成一个具体的通信端口，单独的C
 
 NodePort的实现方式是在Kubernetes集群里的每个Node上为需要外部访问的Service开放一个对应的监听端口，外部系统只要用任意一个Node的IP地址+具体的NodePort端口号即可访问此服务。
 
-## 参考文档
+# 参考文档
 
 kubernetes基本框架和基本概念 转自[《kubernetes基本框架和基本概念》](https://www.jianshu.com/p/0a656b3d94b2)
 

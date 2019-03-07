@@ -201,3 +201,142 @@ Replication Controller（简称RC）用于定义期望值，例如声明某种Po
 3. RC通过Label Selector机制实现对Pod副本的自动控制；
 4. 通过改变RC的Pod副本数量，可以实现Pod的扩容和缩容功能；
 5. 通过改变RC里Pod模版中的镜像版本，可以实现Pod的滚动升级功能；
+
+### 7. Replica Set
+
+由于RC与Kubernetes中的模块Replication Controller同名，所以在Kubernetes 1.2中，它升级为Replica Set，与之前的RC的唯一区别是支持基于集合的Label Selector，而RC只支持基于等式的Label Selector。这使得Replica Set的功能更强。
+
+我们很少直接使用Replica Set，它主要被Deployment这个更高层的对象使用，从而形成一整套的Pod创建、删除、更新的编排机制。当我们使用Deployment时，无需关心它是如何创建和维护Replica Set对象的。
+
+Replica Set和Deployment这两个资源对象逐步替代了之前的RC的作用，是Kubernetes 1.3中Pod自动（伸缩）的这个功能实现的基础。
+
+### 8. Deployment
+
+Deployment为Pod和Replica Set（下一代Replication Controller）提供声明式更新。你只需要在Deployment中描述你想要的目标状态是什么，Deployment controller就会帮你将Pod和Replica Set的实际状态改变到你想要的目标状态。你可以定义一个全新的Deployment，也可以创建一个新的替换就的Deployment。
+
+一个典型的用例如下：
+
+1. 使用Deployment来创建Replica Set。Replica Set在后台创建pod。检查启动状态，看它是成功还是失败。
+2. 然后，通过更新Deployment的PodTemplateSpec字段来声明Pod的新状态。这会创建一个新的Replica Set，Deployment会按照控制的速率将pod从旧的Replica Set移动到新的Replica Set中。
+3. 如果当前状态不稳定，回滚到之前的Deployment revision。每次回滚都会更新Deployment的revision。
+4. 扩容Deployment以满足更高的负载。
+5. 暂停Deployment来应用PodTemplateSpec的多个修复，然后恢复上线。
+6. 根据Deployment的状态判断上线是否hang住了。
+7. 清除旧的不必要的ReplicaSet。
+
+### 9. Horizontal Pod Autoscaler（HPA）
+
+Pod横向自动扩容，通过追踪分析RC控制的所有目标Pod的负载变化情况，来确定是否需要针对性的调整目标Pod的副本数。
+
+HPA有以下两种方式来作为HPA的负载指标：
+
+1. CPUUtilizationPercentage：是指CPU利用率的平均值，通常是过去1min内的平均值；
+2. 应用程序自定义的度量标准：比如服务在每秒内的响应的请求数（TPS或QPS）。
+
+如果某一指标达到临界点，例如CPUUtilizationPercentage达到80%，可以认为是当前Pod副本数很可能不足以支撑接下来更多的请求，此时会触发动态扩容，当请求高峰期过去后，Pod的CPUUtilizationPercentage又会降下来，此时对应的Pod数就会自动减少到一个合理的水平。
+
+### 10. StatefulSet
+
+在Kubernetes中，Pod的管理对象RC，Deployment，DaemonSet和Job都是面向无状态的服务，但是在现实中很多服务都需要状态，例如MySQL、ZooKeeper等。这些应用的集群有以下共同点：
+
+1. 每个节点都有固定的身份ID，通过这个ID，集群中的成员可以相互发现并且通信；
+2. 集群的规模是比较固定的，集群规模不能随意改动；
+3. 集群中每个节点都是有状态的，通常会持久化数据到永久存储中；
+4. 如果磁盘损坏，则集群中某个节点无法正常运行，集群功能受损。
+
+如果用RC/Deployment控制Pod副本数的方式来实现有状态集群，会发现第一点无法满足，因为Pod名字是随机产生的，无法为每个Pod确定唯一不变的ID。另外，为了能够在其他节点上恢复某个是失败的节点，这种集群中的Pod需要挂载某种共享的存储。为了解决这个问题，在Kubernetes 1.4中引入了PetSet，并在Kubernetes 1.5中更名为StatefulSet。
+
+StatefulSet可以看为Deployment/RC的变种，有如下特性：
+
+1. StatefulSet里的每个Pod都有稳定唯一的网络标识，可以用来发现集群中其他成员。假设StatefulSet名字为Kafka，那么第一个Pod叫Kafka-0，第二个为Kafka-1，以此类推；
+2. StatefulSet控制的Pod副本的启停顺序是受控的，操作第n个Pod时，前n-1个Pod已经是运行并且准备好的状态；
+3. StatefulSet里的Pod采用稳定的持久化存储卷，通过PV/PVC来实现，删除Pod时，默认不会删除与StatefulSet相关的存储卷。
+
+### 11. Volume
+
+我们知道默认情况下容器的数据都是非持久化的，在容器消亡以后数据也跟着丢失，所以Docker提供了Volume机制以便将数据持久化存储。类似的，Kubernetes提供了更强大的Volume机制和丰富的插件，除了可以让多个容器共享文件，让容器数据写到宿主机的磁盘上或者网络存储外，还能通过ConfigMap做容器配置文件集中化定义与管理。
+
+Volume类型：
+
+1. emptyDir：Pod被分配到Node时创建的，初始内容为空，无需指定宿主机上对应的目录，因为这是Kubernetes自动分配的一个目录；
+2. hostPath：Pod挂载在宿主机上的文件和目录；
+3. NFS：NFS可以通过网络将远程NFS服务器分享的目录挂载到本地，使得不同机器或操作系统共享文件。使用NFS网络文件系统提供的共享目录存储数据时，需要在系统中部署一个NFS Server。
+
+与Docker不同，Kubernetes Volume的生命周期与Pod绑定：
+
+1. 容器挂掉后Kubelet再次重启容器时，Volume的数据依然还在；
+2. 当Pod删除时，Volume才会清理。数据是否丢失取决于具体的Volume类型，比如emptyDir的数据会丢失，而PV的数据则不会丢失。
+
+### 12. Persistent Volume
+
+Persistent Volume（PV）和PersistentVolumeClaim（PVC）提供了方便的持久化卷：PV提供网络存储资源，而PVC请求存储资源。这样，设置持久化存储的工作流包括配置底层文件系统或者云数据卷、创建持久性数据卷、最后创建claim来将Pod跟数据卷关联起来。PV和PVC可以将Pod和数据卷解耦，Pod不需要知道确切的文件系统或者支持它的持久化引擎。
+
+Pod的Volume与PV的区别：
+
+Volume从属于Pod，生命周期和Pod相同，Pod被删除时，Volume和保存在Volume中的数据就被删除了；Volume和使用它的Pod之间是一种静态绑定关系，在定义Pod文件时也定义了它使用的Volume。Volume是Pod的附属品，我们无法单独创建一个Volume，因为它不是一个独立的资源对象；
+
+PV是一个独立的资源对象，所以我们可以单独创建一个PV。它不和Pod直接发生关系，而是通过PVC来实现动态绑定。Pod定义里指定的PVC，然后PVC根据Pod的要求自动绑定合适的PV。PV是独立的，即使挂载PV的Pod被删除了，PV和PV上的数据仍然存在。
+
+PV的访问模式范围如下：
+
+1. ReadWriteOnce：该卷能够以读写模式被加载到一个节点上。
+2. ReadOnlyMany：该卷能够以只读模式加载到多个节点上。
+3. ReadWriteMany：该卷能够以读写模式被多个节点同时加载。
+
+PV的状态：
+
+1. Available：可用资源，尚未被绑定到PVC上；
+2. Bound：已经绑定到某个PVC上；
+3. Released：对应的PVC已经被删除，但该资源尚未被集群收回；
+4. Failed：改卷的自动回收过程失败。
+
+### 13. 服务发现与负载均衡
+
+Kubernetes在设计之初就充分考虑了针对容器的服务发现与负载均衡机制，提供了Service资源，并通过kube-proxy配合cloud provider来适应不同的应用场景。随着Kubernetes用户的激增，用户场景的不断丰富，又产生了一些新的负载均衡机制。目前，Kubernetes中负载均衡大致可以分为以下几种机制，每种机制都有其特定的应用场景：
+
+1. Service：直接用Service提供cluster内部的负载均衡，并借助cloud provider提供的LB提供外部访问；
+2. Ingress Controller：还是用Service提供cluster内部的负载均衡，但是通过自定义LB提供外部访问；
+3. Service Load Balancer：把load balnacer直接跑在容器中，实现Bare Metal的Service Load Balancer；
+4. Custom Load Balancer：自定义负载均衡，并替代kube-proxy，一般在物理部署Kubernetes时使用，方便接入公司已有的外部服务；
+
+### 14. Service
+
+Kubernetes中的Service对应的是微服务架构中的一个微服务，之前的Pod，RC等资源对象都是为Service服务的。
+
+![](/img/svc-0307.png)
+
+Service定义了一个服务的访问入口地址，前端应用通过这个入口地址访问其背后的一组由Pod副本组成的集群实例。Service与其后端Pod副本集群之间则是通过Label Selector来实现对接。而RC的作用实际上保证Service的服务能力和服务质量始终保持在预期的标准。
+
+因为Pod的IP地址会随着Pod销毁和重新创建而变化，所以访问端不能以写死IP的方式去访问Pod提供的服务。而Service作为Pod路由代理抽象，访问端只需要知道Service的地址，由Service来提供代理，保证了Pod的动态变化对访问端的透明。
+
+每个Node上运行的kube-proxy是一个智能的软件负载均衡器，负责将客户端发送到Service的请求依据负载均衡算法转发到后端的某个Pod实例上。
+
+Service一旦被创建，Kubernetes会为它分配一个可用的Cluster IP，在Service整个生命周期内都不会发生变化。于是服务发现的问题被解决了：使用Service的Name与Cluster IP做一个DNS映射即可。
+
+由此知道，客户端访问Service地址，然后Service将请求转发给Pod。
+
+Service地址如何得到？
+
+首先看一下Cluster IP的特点：
+
+Cluster IP仅仅作用于Kubernetes Service这个对象，并由Kubernetes管理和分配IP地址（来源于Cluster IP地址池）；
+
+Cluster IP无法被ping因为没有一个实体网络对象来响应；
+
+Cluster IP只能结合Service Port组成一个具体的通信端口，单独的Cluster IP不具备TCP/IP通信的基础，并且它们只属于Kubernetes集群这样一个封闭的空间，集群之外的节点要访问这个通信端口，则要做一些额外的工作；
+
+在Kubernetes集群之内，Node IP网、Pod IP网与Cluster IP网之间通信，采用的是Kubernetes自己设计的一种编程方式的特殊的路由规则，与我们熟知的IP路由有很大的不同。
+
+也就是说外网不能直接访问Cluster IP，那么如何访问Service？通过NodePort来访问的。在Service定义中指定NodePort，例如10000， 那么通过NodeIP+NodePort即可访问到Service。
+
+NodePort的实现方式是在Kubernetes集群里的每个Node上为需要外部访问的Service开放一个对应的监听端口，外部系统只要用任意一个Node的IP地址+具体的NodePort端口号即可访问此服务。
+
+## 参考文档
+
+kubernetes基本框架和基本概念 转自[《kubernetes基本框架和基本概念》](https://www.jianshu.com/p/0a656b3d94b2)
+
+kubernetes基本概念 转自[《kubernetes基本概念》](https://juejin.im/entry/5b3c75efe51d451923441ed5)
+
+谈 Kubernetes 的架构设计与实现原理 转自[《谈 Kubernetes 的架构设计与实现原理》](https://draveness.me/understanding-kubernetes)
+
+Kubernetes指南 转自[《Kubernetes指南》](https://github.com/feiskyer/kubernetes-handbook)
